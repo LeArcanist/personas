@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Create Profile</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <h1>Create New Profile</h1>
+        <p>Create a context-specific identity profile.</p>
+      </div>
+
+      <form class="form" action="/personas/new" method="post">
+
+        <div>
+          <div class="label">Category</div>
+          <select class="input" name="category" required>
+            <option value="gaming">Gaming</option>
+            <option value="professional">Professional</option>
+            <option value="religious">Religious</option>
+            <option value="social">Social</option>
+            <option value="academic">Academic</option>
+            <option value="other" selected>Other</option>
+          </select>
+        </div>
+
+        <div>
+          <div class="label">Profile Name</div>
+          <input class="input" type="text" name="name" placeholder="Profile name" required>
+        </div>
+
+        <div>
+          <div class="label">Short Description</div>
+          <input class="input" type="text" name="description" placeholder="Description (optional)">
+        </div>
+
+        <div>
+          <div class="label">Visibility</div>
+          <select class="input" name="is_public" required>
+            <option value="0" selected>Private</option>
+            <option value="1">Public</option>
+          </select>
+        </div>        
+
+        <div class="actions">
+          <button class="btn primary" type="submit">Create</button>
+          <a class="btn" href="/dashboard">Cancel</a>
+        </div>
+      </form>
+
+      {% if error %}
+        <div class="alert error">{{ error }}</div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

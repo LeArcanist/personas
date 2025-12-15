@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <h1>Dashboard</h1>
+        <p>Welcome, {{ user.username }}. Manage your profiles here.</p>
+      </div>
+
+      <div class="actions" style="margin-top:16px;">
+        <a class="btn primary" href="/personas/new">Create New Profile</a>
+        <a class="btn" href="/logout">Logout</a>
+      </div>
+
+      <hr style="margin:18px 0; border:0; border-top:1px solid rgba(255,255,255,0.14);">
+
+      <h2 style="margin:0 0 10px;">Your Profiles</h2>
+
+      {% if personas|length == 0 %}
+        <p class="small">No profiles yet. Create your first persona (e.g., gaming, professional, religious).</p>
+      {% else %}
+        <div class="grid" style="grid-template-columns: 1fr; gap: 10px;">
+          {% for p in personas %}
+            <div class="card" style="padding:16px;">
+              <strong>{{ p.name }}</strong>
+              <div class="small">{{ p.category }}</div>
+              {% if p.description %}
+                <div class="small">{{ p.description }}</div>
+              {% endif %}
+              <div class="actions" style="margin-top:10px;">
+                <a class="btn" href="/personas/{{ p.id }}/edit">Edit</a>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

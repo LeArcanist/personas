@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Account</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>Create User Account</h1>
+
+    <form action="/register" method="post">
+        <label>Username:</label><br>
+        <input type="text" name="username" required><br><br>
+
+        <label>Email:</label><br>
+        <input type="email" name="email" required><br><br>
+
+        <label>Password:</label><br>
+        <input type="password" name="password" required><br><br>
+
+        <button type="submit">Register</button>
+    </form>
+
+    {% if error %}
+        <p style="color:red">{{ error }}</p>
+    {% endif %}
+
+    {% if success %}
+        <p style="color:green">{{ success }}</p>
+    {% endif %}
+</body>
+</html>

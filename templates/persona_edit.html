@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edit Profile</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <h1>Edit Profile</h1>
+        <p>Update your context profile details.</p>
+      </div>
+
+      <form class="form" action="/personas/{{ persona.id }}/edit" method="post">
+
+        <div>
+          <div class="label">Category</div>
+          <select class="input" name="category" required>
+            {% set cats = ["gaming","professional","religious","social","academic","other"] %}
+            {% for c in cats %}
+              <option value="{{ c }}" {% if persona.category == c %}selected{% endif %}>
+                {{ c.capitalize() }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <div class="label">Profile Name</div>
+          <input class="input" type="text" name="name" value="{{ persona.name }}" required>
+        </div>
+
+        <div>
+          <div class="label">Short Description</div>
+          <input class="input" type="text" name="description" value="{{ persona.description or '' }}">
+        </div>
+
+        <div>
+          <div class="label">Active</div>
+          <select class="input" name="is_active" required>
+            <option value="1" {% if persona.is_active %}selected{% endif %}>Yes</option>
+            <option value="0" {% if not persona.is_active %}selected{% endif %}>No</option>
+          </select>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" type="submit">Save Changes</button>
+          <a class="btn" href="/dashboard">Cancel</a>
+        </div>
+      </form>
+
+      {% if error %}
+        <div class="alert error">{{ error }}</div>
+      {% endif %}
+      {% if success %}
+        <div class="alert success">{{ success }}</div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>
