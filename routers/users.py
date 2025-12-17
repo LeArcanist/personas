@@ -275,6 +275,7 @@ def create_persona(
         name=name,
         category=category,
         description=description.strip() if description else None,
+        is_public=(is_public == "1")
     )
 
     db.add(persona)
