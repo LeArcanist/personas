@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Profile View</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <h1>{{ persona.name }}</h1>
+        <p>
+          Category: <strong>{{ persona.category }}</strong> •
+          Visibility: <strong>{{ "Public" if persona.is_public else "Private" }}</strong>
+        </p>
+      </div>
+
+      {% if persona.description %}
+        <div class="card" style="padding:16px; margin-top:14px;">
+          <div class="small"><strong>Description</strong></div>
+          <div>{{ persona.description }}</div>
+        </div>
+      {% endif %}
+
+      <div class="actions" style="margin-top:16px;">
+        <a class="btn" href="/dashboard">Back to Dashboard</a>
+        <a class="btn" href="/personas/{{ persona.id }}/edit">Edit</a>
+      </div>
+
+      <hr style="margin:18px 0; border:0; border-top:1px solid rgba(255,255,255,0.14);">
+
+      <h2 style="margin:0 0 10px;">Other Public {{ persona.category.capitalize() }} Profiles</h2>
+
+      {% if others|length == 0 %}
+        <p class="small">No other public profiles found in this category yet.</p>
+      {% else %}
+        <div class="grid" style="grid-template-columns: 1fr; gap: 10px;">
+          {% for o in others %}
+            <div class="card" style="padding:16px;">
+              <strong>{{ o.name }}</strong>
+              {% if o.description %}
+                <div class="small">{{ o.description }}</div>
+              {% endif %}
+              <div class="actions" style="margin-top:10px;">
+                <a class="btn"
+                    href="/public/{{ o.owner_username }}/{{ o.id }}?from_category={{ persona.category }}">
+                    View
+                </a>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

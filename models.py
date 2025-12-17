@@ -21,16 +21,14 @@ class Persona(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     name = Column(String, nullable=False)
 
-    category = Column(String, nullable=False, default="other")   # NEW
-    description = Column(String, nullable=True)                  # NEW
+    category = Column(String, nullable=False, default="other")  
+    description = Column(String, nullable=True)                 
+    is_public = Column(Boolean, default=False)
 
-    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="personas")
     profile = relationship("PersonaProfile", back_populates="persona", uselist=False)
-
-    is_public = Column(Boolean, default=False)
 
 class PersonaProfile(Base):
     __tablename__ = "persona_profiles"

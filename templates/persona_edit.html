@@ -37,10 +37,10 @@
         </div>
 
         <div>
-          <div class="label">Active</div>
-          <select class="input" name="is_active" required>
-            <option value="1" {% if persona.is_active %}selected{% endif %}>Yes</option>
-            <option value="0" {% if not persona.is_active %}selected{% endif %}>No</option>
+          <div class="label">Visibility</div>
+          <select class="input" name="is_public" required>
+            <option value="0" {% if not persona.is_public %}selected{% endif %}>Private</option>
+            <option value="1" {% if persona.is_public %}selected{% endif %}>Public</option>
           </select>
         </div>
 

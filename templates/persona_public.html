@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Public Profile</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      {% if error %}
+        <div class="alert error">{{ error }}</div>
+        <a class="btn" href="/">Back</a>
+      {% else %}
+        <div class="header">
+          <h1>{{ persona.name }}</h1>
+          <p>Category: <strong>{{ persona.category }}</strong> • Public Profile</p>
+        </div>
+
+        {% if persona.description %}
+          <div class="card" style="padding:16px; margin-top:14px;">
+            <div class="small"><strong>Description</strong></div>
+            <div>{{ persona.description }}</div>
+          </div>
+        {% endif %}
+
+        <div class="actions" style="margin-top:16px;">
+            {% if request.session.get("user_id") %}
+              <a class="btn" href="/dashboard">Dashboard</a>
+              <button class="btn" type="button" onclick="window.history.back();">
+                Back
+              </button>
+            {% endif %}
+          </div>          
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

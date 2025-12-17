@@ -156,7 +156,7 @@ def edit_persona_save(
     category: str = Form(...),
     name: str = Form(...),
     description: str = Form(""),
-    is_active: str = Form(...),
+    is_public: str = Form("0"),
     db: Session = Depends(get_db)
 ):
     user_id = request.session.get("user_id")
@@ -182,11 +182,70 @@ def edit_persona_save(
     persona.category = category
     persona.name = name
     persona.description = description.strip() if description else None
-    persona.is_active = True if is_active == "1" else False
+    persona.is_public = True if is_public == "1" else False
 
     db.commit()
 
     return RedirectResponse(url="/dashboard", status_code=303)
+
+@router.get("/personas/{persona_id}", response_class=HTMLResponse)
+def view_persona(persona_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    persona = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
+    if not persona or persona.user_id != user_id:
+        return RedirectResponse(url="/dashboard", status_code=303)
+    others = (
+        db.query(models.Persona, models.User.username)
+        .join(models.User, models.User.id == models.Persona.user_id)
+        .filter(models.Persona.category == persona.category)
+        .filter(models.Persona.is_public == True)
+        .filter(models.Persona.user_id != user_id)
+        .all()
+    )
+
+    others_clean = []
+    for p, owner_username in others:
+        others_clean.append({
+            "id": p.id,
+            "name": p.name,
+            "description": p.description,
+            "owner_username": owner_username
+        })
+
+    return templates.TemplateResponse(
+        "persona_view.html",
+        {
+            "request": request,
+            "persona": persona,
+            "others": others_clean
+        }
+    )
+
+@router.get("/public/{username}/{persona_id}", response_class=HTMLResponse)
+def view_public_persona(username: str, persona_id: int, request: Request, db: Session = Depends(get_db)):
+    persona = (
+        db.query(models.Persona)
+        .join(models.User, models.User.id == models.Persona.user_id)
+        .filter(models.User.username == username)
+        .filter(models.Persona.id == persona_id)
+        .filter(models.Persona.is_public == True)
+        .first()
+    )
+
+    if not persona:
+        return templates.TemplateResponse(
+            "persona_public.html",
+            {"request": request, "error": "Public profile not found."}
+        )
+
+    return templates.TemplateResponse(
+        "persona_public.html",
+        {"request": request, "persona": persona}
+    )
+
 
 @router.post("/personas/new", response_class=HTMLResponse)
 def create_persona(
@@ -194,13 +253,13 @@ def create_persona(
     category: str = Form(...),
     name: str = Form(...),
     description: str = Form(""),
+    is_public: str = Form("0"),
     db: Session = Depends(get_db)
 ):
     user_id = request.session.get("user_id")
     if not user_id:
         return RedirectResponse(url="/login", status_code=303)
-
-    # Optional: enforce unique persona name per user
+    
     existing = db.query(models.Persona).filter(
         models.Persona.user_id == user_id,
         models.Persona.name == name
@@ -216,7 +275,6 @@ def create_persona(
         name=name,
         category=category,
         description=description.strip() if description else None,
-        is_active=True
     )
 
     db.add(persona)

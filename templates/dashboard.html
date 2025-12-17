@@ -27,11 +27,17 @@
         <div class="grid" style="grid-template-columns: 1fr; gap: 10px;">
           {% for p in personas %}
             <div class="card" style="padding:16px;">
-              <strong>{{ p.name }}</strong>
+              {{ p.name }}
               <div class="small">{{ p.category }}</div>
               {% if p.description %}
                 <div class="small">{{ p.description }}</div>
               {% endif %}
+              <div class="small">
+                Visibility: {{ "Public" if p.is_public else "Private" }}
+              </div>
+              <strong>
+                <a class="btn" style="padding:6px 10px;" href="/personas/{{ p.id }}">Open</a>
+              </strong>              
               <div class="actions" style="margin-top:10px;">
                 <a class="btn" href="/personas/{{ p.id }}/edit">Edit</a>
               </div>
