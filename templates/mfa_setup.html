@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MFA Setup</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <h1>Enable Authenticator MFA</h1>
+        <p>Scan the QR code with Google Authenticator (or any TOTP app), then enter the 6-digit code.</p>
+      </div>
+
+      {% if already_enabled %}
+        <div class="alert success">MFA is already enabled for your account.</div>
+      {% endif %}
+
+      {% if error %}
+        <div class="alert error">{{ error }}</div>
+      {% endif %}
+
+      {% if qr_b64 %}
+        <div class="card" style="padding:16px; margin-top:14px; text-align:center;">
+          <img alt="MFA QR Code" style="max-width:260px; width:100%; height:auto;"
+               src="data:image/png;base64,{{ qr_b64 }}">
+          <div class="small" style="margin-top:10px;">
+            If you can’t scan, you can manually enter this secret:<br>
+            <code>{{ secret }}</code>
+          </div>
+        </div>
+      {% else %}
+        <div class="small" style="margin-top:14px;">
+          Secret: <code>{{ secret }}</code>
+        </div>
+      {% endif %}
+
+      <form class="form" action="/mfa/confirm" method="post" style="margin-top:14px;">
+        <div>
+          <div class="label">6-digit code</div>
+          <input class="input" type="text" name="code" inputmode="numeric" placeholder="123456" required>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" type="submit">Confirm & Enable</button>
+          <a class="btn" href="/dashboard">Cancel</a>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DM Inbox</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <h1>DM Inbox</h1>
+        <p>Active persona: <strong>{{ active_persona }}</strong></p>
+      </div>
+
+      <div class="actions" style="margin-top:16px;">
+        <a class="btn" href="/chats">Back to Categories</a>
+        <a class="btn" href="/dashboard">Back to Profiles</a>
+      </div>
+
+      <div style="margin-top:16px;">
+        {% if threads|length == 0 %}
+          <p class="small">No DM threads yet. Start one from a category chat.</p>
+        {% else %}
+          {% for t in threads %}
+            <div class="card" style="padding:14px; margin-bottom:10px;">
+              <strong>{{ t.other_name }}</strong>
+              <div class="small">Category: {{ t.category.capitalize() }}</div>
+              <div class="actions" style="margin-top:10px;">
+                <a class="btn" href="/dm/{{ t.thread_id }}">Open</a>
+              </div>
+            </div>
+          {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>

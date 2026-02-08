@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chats</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <h1>Chats</h1>
+        <p>Select a category and the persona you want to chat as.</p>
+      </div>
+
+      {% if personas|length == 0 %}
+        <div class="alert error" style="margin-top:14px;">
+          You don’t have any profiles yet. Create a profile first.
+        </div>
+        <div class="actions" style="margin-top:16px;">
+          <a class="btn" href="/dashboard">Back to Profiles</a>
+        </div>
+      {% else %}
+
+      <form class="form" action="/chats/enter" method="post" style="margin-top:14px;">
+        <div>
+          <div class="label">Category</div>
+          <select class="input" id="categorySelect" name="category" required>
+            {% for c in categories %}
+              <option value="{{ c }}">{{ c.capitalize() }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <div class="label">Persona (chat identity)</div>
+          <select class="input" id="personaSelect" name="persona_id" required></select>
+          <div class="small" id="personaHint" style="margin-top:8px;"></div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" type="submit">Enter Chat</button>
+          <a class="btn" href="/dashboard">Back to Profiles</a>
+        </div>
+      </form>
+
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    const personas = {{ personas | tojson }};
+    const activePersonaId = {{ active_persona_id or "null" }};
+
+    const catSelect = document.getElementById("categorySelect");
+    const personaSelect = document.getElementById("personaSelect");
+    const hint = document.getElementById("personaHint");
+
+    function renderPersonasForCategory(category) {
+      personaSelect.innerHTML = "";
+
+      const filtered = personas.filter(p => (p.category || "other") === category);
+
+      for (const p of filtered) {
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = p.name + (p.is_public ? " (Public)" : " (Private)");
+        personaSelect.appendChild(opt);
+      }
+
+      // Preselect active persona if it matches this category
+      if (activePersonaId) {
+        const match = filtered.find(p => p.id === activePersonaId);
+        if (match) personaSelect.value = String(activePersonaId);
+      }
+
+      if (filtered.length === 0) {
+        hint.textContent = "No persona found in this category. Choose another category.";
+      } else {
+        hint.textContent = "You will send messages and DM as the selected persona.";
+      }
+    }
+
+    catSelect.addEventListener("change", () => renderPersonasForCategory(catSelect.value));
+
+    // init
+    renderPersonasForCategory(catSelect.value);
+  </script>
+</body>
+</html>

@@ -3,6 +3,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+# mfa
+import io
+import base64
+import pyotp
+import qrcode
+
 from database import SessionLocal
 import models
 from auth_utils import hash_password, verify_password
@@ -16,6 +22,124 @@ def get_db():
         yield db
     finally:
         db.close()
+
+@router.get("/mfa/setup", response_class=HTMLResponse)
+def mfa_setup(request: Request, db: Session = Depends(get_db)):
+    user_id = require_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        request.session.clear()
+        return RedirectResponse(url="/login", status_code=303)
+
+    # If user doesn't have a secret yet, generate one
+    if not user.totp_secret:
+        user.totp_secret = pyotp.random_base32()
+        db.commit()
+        db.refresh(user)
+
+    issuer = "ContextIdentityFYP"  # shows up in Google Authenticator
+    totp = pyotp.TOTP(user.totp_secret)
+
+    # otpauth URI Google Authenticator understands
+    otpauth_uri = totp.provisioning_uri(name=user.username, issuer_name=issuer)
+
+    # Generate QR code PNG in memory and base64 encode for HTML <img>
+    img = qrcode.make(otpauth_uri)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    qr_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+
+    return templates.TemplateResponse(
+        "mfa_setup.html",
+        {
+            "request": request,
+            "username": user.username,
+            "qr_b64": qr_b64,
+            "secret": user.totp_secret, 
+            "already_enabled": bool(user.mfa_enabled),
+        }
+    )
+
+@router.post("/mfa/confirm", response_class=HTMLResponse)
+def mfa_confirm(
+    request: Request,
+    code: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    user_id = require_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user or not user.totp_secret:
+        return RedirectResponse(url="/mfa/setup", status_code=303)
+
+    totp = pyotp.TOTP(user.totp_secret)
+
+    # valid_window=1 tolerates small clock drift
+    if not totp.verify(code.strip(), valid_window=1):
+        return templates.TemplateResponse(
+            "mfa_setup.html",
+            {
+                "request": request,
+                "username": user.username,
+                "error": "Invalid code. Try again.",
+                "qr_b64": None, 
+                "secret": user.totp_secret,
+                "already_enabled": bool(user.mfa_enabled),
+            }
+        )
+
+    user.mfa_enabled = True
+    db.commit()
+
+    return RedirectResponse(url="/mfa/setup", status_code=303)
+
+@router.get("/mfa/verify", response_class=HTMLResponse)
+def mfa_verify_form(request: Request):
+    pending = request.session.get("mfa_pending_user_id")
+    if not pending:
+        return RedirectResponse(url="/login", status_code=303)
+
+    return templates.TemplateResponse("mfa_verify.html", {"request": request})
+
+@router.post("/mfa/verify", response_class=HTMLResponse)
+def mfa_verify_submit(
+    request: Request,
+    code: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    pending_user_id = request.session.get("mfa_pending_user_id")
+    if not pending_user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    user = db.query(models.User).filter(models.User.id == pending_user_id).first()
+    if not user or not user.mfa_enabled or not user.totp_secret:
+        request.session.pop("mfa_pending_user_id", None)
+        return RedirectResponse(url="/login", status_code=303)
+
+    totp = pyotp.TOTP(user.totp_secret)
+    if not totp.verify(code.strip(), valid_window=1):
+        return templates.TemplateResponse(
+            "mfa_verify.html",
+            {"request": request, "error": "Invalid code. Try again."}
+        )
+
+    request.session.pop("mfa_pending_user_id", None)
+    request.session["user_id"] = user.id
+    request.session["username"] = user.username
+
+    return RedirectResponse(url="/dashboard", status_code=303)
+
+
+def require_user_id(request: Request):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return None
+    return user_id
 
 @router.get("/login", response_class=HTMLResponse)
 def login_form(request: Request):
@@ -44,6 +168,12 @@ def login_user(
             }
         )
     
+    request.session.clear()
+
+    if user.mfa_enabled:
+        request.session["mfa_pending_user_id"] = user.id
+        return RedirectResponse(url="/mfa/verify", status_code=303)
+
     request.session["user_id"] = user.id
     request.session["username"] = user.username
     return RedirectResponse(url="/dashboard", status_code=303)
@@ -68,44 +198,23 @@ def register_user(
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    # 1️⃣ Check if username or email already exists
-    existing_user = db.query(models.User).filter(
-        (models.User.username == username) |
-        (models.User.email == email)
-    ).first()
+    username = username.strip()
+    email = email.strip().lower()
 
-    if existing_user:
-        return templates.TemplateResponse(
-            "register.html",
-            {
-                "request": request,
-                "error": "Username or email already exists"
-            }
-        )
-
-    # 2️⃣ Hash the password
-    hashed_pw = hash_password(password)
-
-    # 3️⃣ Create User ORM object
-    new_user = models.User(
+    user = models.User(
         username=username,
         email=email,
-        password_hash=hashed_pw
+        password_hash=hash_password(password)
     )
-
-    # 4️⃣ Save to database
-    db.add(new_user)
+    db.add(user)
     db.commit()
-    db.refresh(new_user)  # gets generated ID
+    db.refresh(user)
 
-    # 5️⃣ Return success message
-    return templates.TemplateResponse(
-        "register.html",
-        {
-            "request": request,
-            "success": f"Account created successfully for {new_user.username}"
-        }
-    )
+    # Optional: auto-login after register
+    request.session["user_id"] = user.id
+    request.session["username"] = user.username
+
+    return RedirectResponse(url="/dashboard", status_code=303)
 
 @router.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request, db: Session = Depends(get_db)):

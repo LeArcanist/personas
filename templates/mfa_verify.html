@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MFA Verify</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <h1>MFA Required</h1>
+        <p>Enter the 6-digit code from your authenticator app.</p>
+      </div>
+
+      {% if error %}
+        <div class="alert error">{{ error }}</div>
+      {% endif %}
+
+      <form class="form" action="/mfa/verify" method="post">
+        <div>
+          <div class="label">6-digit code</div>
+          <input class="input" type="text" name="code" inputmode="numeric" placeholder="123456" required>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" type="submit">Verify</button>
+          <a class="btn" href="/login">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

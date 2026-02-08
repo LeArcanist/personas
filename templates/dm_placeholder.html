@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DM</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <h1>DM ({{ category.capitalize() }})</h1>
+        <p><strong>{{ me_name }}</strong> chatting with <strong>{{ other_name }}</strong></p>
+      </div>
+
+      <div class="alert success" style="margin-top:14px;">
+        DM thread created successfully. Step 4 will implement sending/receiving messages.
+      </div>
+
+      <div class="actions" style="margin-top:16px;">
+        <a class="btn" href="/chats/{{ category }}">Back to {{ category.capitalize() }} Chat</a>
+        <a class="btn" href="/chats">Change Persona</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DM</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <h1>DM • {{ category.capitalize() }}</h1>
+        <p><strong>{{ active_persona.name }}</strong> ↔ <strong>{{ other_name }}</strong></p>
+      </div>
+
+      <div class="actions" style="margin-top:16px;">
+        <a class="btn" href="/dm">Inbox</a>
+        <a class="btn" href="/chats/{{ category }}">Back to {{ category.capitalize() }} Chat</a>
+      </div>
+
+      <div id="chatBox" class="card" style="padding:16px; margin-top:16px; height:360px; overflow:auto;">
+        {% if messages|length == 0 %}
+          <div class="small">No messages yet. Say hi.</div>
+        {% endif %}
+
+        {% for m in messages %}
+          <div class="card" style="padding:10px; margin-bottom:10px;" data-msg-id="{{ m.id }}">
+            <div class="small">
+              <strong>{{ m.sender_name }}</strong>
+              • {{ m.created_at }}
+              {% if m.is_me %} • (you){% endif %}
+            </div>
+            <div>{{ m.content }}</div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <form class="form" action="/dm/{{ thread_id }}/send" method="post" style="margin-top:12px;">
+        <div>
+          <div class="label">Message</div>
+          <input class="input" type="text" name="content" maxlength="500" placeholder="Type a message..." required>
+        </div>
+        <div class="actions">
+          <button class="btn primary" type="submit">Send</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const threadId = {{ thread_id }};
+    const chatBox = document.getElementById("chatBox");
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function getLastId() {
+      const cards = chatBox.querySelectorAll("[data-msg-id]");
+      if (cards.length === 0) return 0;
+      return parseInt(cards[cards.length - 1].dataset.msgId, 10);
+    }
+
+    function appendMessage(m) {
+      const wrap = document.createElement("div");
+      wrap.className = "card";
+      wrap.style.padding = "10px";
+      wrap.style.marginBottom = "10px";
+      wrap.dataset.msgId = m.id;
+
+      wrap.innerHTML = `
+        <div class="small">
+          <strong>${escapeHtml(m.sender_name)}</strong>
+          • ${escapeHtml(m.created_at)}
+          ${m.is_me ? " • (you)" : ""}
+        </div>
+        <div>${escapeHtml(m.content)}</div>
+      `;
+      chatBox.appendChild(wrap);
+    }
+
+    async function poll() {
+      try {
+        const afterId = getLastId();
+        const res = await fetch(`/dm/${threadId}/messages?after_id=${afterId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const atBottom = (chatBox.scrollTop + chatBox.clientHeight) >= (chatBox.scrollHeight - 20);
+          data.forEach(appendMessage);
+          if (atBottom) chatBox.scrollTop = chatBox.scrollHeight;
+        }
+      } catch (e) {}
+    }
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+    setInterval(poll, 1200);
+  </script>
+</body>
+</html>
