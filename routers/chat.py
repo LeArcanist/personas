@@ -278,7 +278,7 @@ def dm_start(
     return RedirectResponse(url=f"/dm/{thread.id}", status_code=303)
 
 @router.get("/dm/{thread_id}", response_class=HTMLResponse)
-def dm_thread_placeholder(thread_id: int, request: Request, db: Session = Depends(get_db)):
+def dm_thread(thread_id: int, request: Request, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
     if not user_id:
         return RedirectResponse(url="/login", status_code=303)
@@ -289,26 +289,49 @@ def dm_thread_placeholder(thread_id: int, request: Request, db: Session = Depend
 
     thread = db.query(models.DMThread).filter(models.DMThread.id == thread_id).first()
     if not thread:
-        return RedirectResponse(url="/chats", status_code=303)
+        return RedirectResponse(url="/dm", status_code=303)
 
-    # Must be one of the personas in the thread
+    # must be participant
     if active_persona_id not in (thread.persona_a_id, thread.persona_b_id):
+        return RedirectResponse(url="/dm", status_code=303)
+
+    active = db.query(models.Persona).filter(models.Persona.id == active_persona_id).first()
+    if not active or active.user_id != user_id:
         return RedirectResponse(url="/chats", status_code=303)
 
     other_id = thread.persona_b_id if active_persona_id == thread.persona_a_id else thread.persona_a_id
     other = db.query(models.Persona).filter(models.Persona.id == other_id).first()
-    me = db.query(models.Persona).filter(models.Persona.id == active_persona_id).first()
+
+    rows = (
+        db.query(models.DMMessage, models.Persona.name)
+        .join(models.Persona, models.Persona.id == models.DMMessage.sender_persona_id)
+        .filter(models.DMMessage.thread_id == thread.id)
+        .order_by(models.DMMessage.id.desc())
+        .limit(50)
+        .all()
+    )
+    rows.reverse()
+
+    messages = [{
+        "id": m.id,
+        "sender_name": sender_name,
+        "content": m.content,
+        "created_at": m.created_at.isoformat(timespec="seconds"),
+        "is_me": (m.sender_persona_id == active.id),
+    } for m, sender_name in rows]
 
     return templates.TemplateResponse(
-        "dm_placeholder.html",
+        "dm_thread.html",
         {
             "request": request,
+            "thread_id": thread.id,
             "category": thread.category,
-            "me_name": me.name if me else "Me",
-            "other_name": other.name if other else "Other",
-            "thread_id": thread.id
+            "active_persona": {"id": active.id, "name": active.name},  # ✅ now defined
+            "other_name": other.name if other else "Unknown",
+            "messages": messages,
         }
     )
+
 
 def require_active_persona(request: Request, db: Session):
     user_id = request.session.get("user_id")
