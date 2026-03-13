@@ -24,6 +24,7 @@
           {% for t in threads %}
             <div class="card" style="padding:14px; margin-bottom:10px;">
               <strong>{{ t.other_name }}</strong>
+              <div class="small">As: {{ t.my_persona_name }}</div>
               <div class="small">Category: {{ t.category.capitalize() }}</div>
               <div class="actions" style="margin-top:10px;">
                 <a class="btn" href="/dm/{{ t.thread_id }}">Open</a>
