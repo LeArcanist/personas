@@ -58,10 +58,10 @@
           {% endfor %}
         </div>
       {% endif %}
-      <form class="form" action="/chats/{{ category }}/send" method="post" style="margin-top:12px;">
+      <form class="form" id="chatForm" style="margin-top:12px;">
         <div>
           <div class="label">Message</div>
-          <input class="input" type="text" name="content" maxlength="500" placeholder="Type a message..." required>
+          <input class="input" id="messageInput" type="text" maxlength="500" placeholder="Type a message..." required>
         </div>
         <div class="actions">
           <button class="btn primary" type="submit">Send</button>
@@ -72,8 +72,14 @@
 
   <script>
     const category = {{ category | tojson }};
+    const personaId = {{ active_persona.id }};
     const chatBox = document.getElementById("chatBox");
-
+    const form = document.getElementById("chatForm");
+    const input = document.getElementById("messageInput");
+  
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const socket = new WebSocket(`${protocol}://${window.location.host}/ws/chats/${encodeURIComponent(category)}/${personaId}`);
+  
     function escapeHtml(str) {
       return String(str)
         .replaceAll("&", "&amp;")
@@ -82,47 +88,39 @@
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
     }
-
-    function getLastId() {
-      const cards = chatBox.querySelectorAll("[data-msg-id]");
-      if (cards.length === 0) return 0;
-      return parseInt(cards[cards.length - 1].dataset.msgId, 10);
-    }
-
+  
     function appendMessage(m) {
       const wrap = document.createElement("div");
       wrap.className = "card";
       wrap.style.padding = "10px";
       wrap.style.marginBottom = "10px";
       wrap.dataset.msgId = m.id;
-
+  
       wrap.innerHTML = `
         <div class="small">
           <strong>${escapeHtml(m.sender_name)}</strong>
           • ${escapeHtml(m.created_at)}
-          ${m.is_me ? " • (you)" : ""}
         </div>
         <div>${escapeHtml(m.content)}</div>
       `;
       chatBox.appendChild(wrap);
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
-
-    async function poll() {
-      try {
-        const afterId = getLastId();
-        const res = await fetch(`/chats/${encodeURIComponent(category)}/messages?after_id=${afterId}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          const atBottom = (chatBox.scrollTop + chatBox.clientHeight) >= (chatBox.scrollHeight - 20);
-          data.forEach(appendMessage);
-          if (atBottom) chatBox.scrollTop = chatBox.scrollHeight;
-        }
-      } catch (e) { /* ignore */ }
-    }
-
-    chatBox.scrollTop = chatBox.scrollHeight;
-    setInterval(poll, 1200);
+  
+    socket.onmessage = function(event) {
+      const data = JSON.parse(event.data);
+      appendMessage(data);
+    };
+  
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+  
+      const content = input.value.trim();
+      if (!content) return;
+  
+      socket.send(JSON.stringify({ content }));
+      input.value = "";
+    });
   </script>
 </body>
 </html>

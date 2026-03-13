@@ -125,7 +125,6 @@ def test_dm_start_and_send_and_poll_between_personas(db_session):
         # Access control: random thread id should not be allowed (403 or redirect)
         bad = client_b.get("/dm/999999/messages?after_id=0")
         assert bad.status_code in (200, 302, 303, 403)
-        # If 200, likely error JSON – acceptable depending on your implementation.
 
     finally:
         client_a.close()

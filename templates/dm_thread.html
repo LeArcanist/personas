@@ -19,7 +19,7 @@
 
       <div id="chatBox" class="card" style="padding:16px; margin-top:16px; height:360px; overflow:auto;">
         {% if messages|length == 0 %}
-          <div class="small">No messages yet. Say hi.</div>
+          <div class="small" id="emptyMessage">No messages yet. Say hi.</div>
         {% endif %}
 
         {% for m in messages %}
@@ -34,10 +34,10 @@
         {% endfor %}
       </div>
 
-      <form class="form" action="/dm/{{ thread_id }}/send" method="post" style="margin-top:12px;">
+      <form class="form" id="dmForm" style="margin-top:12px;">
         <div>
           <div class="label">Message</div>
-          <input class="input" type="text" name="content" maxlength="500" placeholder="Type a message..." required>
+          <input class="input" id="messageInput" type="text" maxlength="500" placeholder="Type a message..." required>
         </div>
         <div class="actions">
           <button class="btn primary" type="submit">Send</button>
@@ -48,7 +48,11 @@
 
   <script>
     const threadId = {{ thread_id }};
+    const personaId = {{ active_persona.id }};
     const chatBox = document.getElementById("chatBox");
+    const form = document.getElementById("dmForm");
+    const input = document.getElementById("messageInput");
+    const emptyMessage = document.getElementById("emptyMessage");
 
     function escapeHtml(str) {
       return String(str)
@@ -59,18 +63,16 @@
         .replaceAll("'", "&#039;");
     }
 
-    function getLastId() {
-      const cards = chatBox.querySelectorAll("[data-msg-id]");
-      if (cards.length === 0) return 0;
-      return parseInt(cards[cards.length - 1].dataset.msgId, 10);
-    }
-
     function appendMessage(m) {
+      if (emptyMessage) {
+        emptyMessage.remove();
+      }
+
       const wrap = document.createElement("div");
       wrap.className = "card";
       wrap.style.padding = "10px";
       wrap.style.marginBottom = "10px";
-      wrap.dataset.msgId = m.id;
+      wrap.dataset.msgId = m.id || "";
 
       wrap.innerHTML = `
         <div class="small">
@@ -80,25 +82,36 @@
         </div>
         <div>${escapeHtml(m.content)}</div>
       `;
+
       chatBox.appendChild(wrap);
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    async function poll() {
-      try {
-        const afterId = getLastId();
-        const res = await fetch(`/dm/${threadId}/messages?after_id=${afterId}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          const atBottom = (chatBox.scrollTop + chatBox.clientHeight) >= (chatBox.scrollHeight - 20);
-          data.forEach(appendMessage);
-          if (atBottom) chatBox.scrollTop = chatBox.scrollHeight;
-        }
-      } catch (e) {}
-    }
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const socket = new WebSocket(
+      `${protocol}://${window.location.host}/ws/dm/${threadId}/${personaId}`
+    );
+
+    socket.onmessage = function(event) {
+      const data = JSON.parse(event.data);
+      appendMessage(data);
+    };
+
+    socket.onclose = function() {
+      console.log("DM socket closed");
+    };
+
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      const content = input.value.trim();
+      if (!content) return;
+
+      socket.send(JSON.stringify({ content }));
+      input.value = "";
+    });
 
     chatBox.scrollTop = chatBox.scrollHeight;
-    setInterval(poll, 1200);
   </script>
 </body>
 </html>
