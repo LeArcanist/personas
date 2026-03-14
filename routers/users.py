@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+
 # mfa
 import io
 import base64
@@ -252,10 +253,24 @@ def edit_persona_form(persona_id: int, request: Request, db: Session = Depends(g
     # Security: ensure persona belongs to logged in user
     if not persona or persona.user_id != user_id:
         return RedirectResponse(url="/dashboard", status_code=303)
+    
+    identities = (
+        db.query(models.ExternalIdentity)
+        .filter(models.ExternalIdentity.persona_id == persona.id)
+        .all()
+    )
+
+    google_linked = any(i.provider == "google" for i in identities)
+
 
     return templates.TemplateResponse(
         "persona_edit.html",
-        {"request": request, "persona": persona}
+        {
+            "request": request, 
+            "persona": persona,
+            "identities": identities,
+            "google_linked": google_linked,
+        }
     )
 
 @router.post("/personas/{persona_id}/edit", response_class=HTMLResponse)

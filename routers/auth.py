@@ -18,13 +18,16 @@ async def link_google(request: Request, persona_id: int, db: Session = Depends(g
     if not persona or persona.user_id != user_id:
         return RedirectResponse(url="/dashboard", status_code=303)
 
-    request.session["link_persona_id"] = persona.id
+    request.session["google_link_persona_id"] = persona.id
 
     redirect_uri = request.url_for("google_link_callback")
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 @router.get("/auth/google/link/callback", name="google_link_callback")
 async def google_link_callback(request: Request, db: Session = Depends(get_db)):
+    print("CALLBACK session user_id =", request.session.get("user_id"))
+    print("CALLBACK session google_link_persona_id =", request.session.get("google_link_persona_id"))
+
     user_id = request.session.get("user_id")
     persona_id = request.session.get("google_link_persona_id")
 
@@ -38,6 +41,8 @@ async def google_link_callback(request: Request, db: Session = Depends(get_db)):
 
     token = await oauth.google.authorize_access_token(request)
     user_info = token["userinfo"]
+    print("CALLBACK google sub =", user_info.get("sub"))
+    print("CALLBACK google email =", user_info.get("email"))
 
     provider = "google"
     provider_user_id = user_info["sub"]
@@ -64,6 +69,9 @@ async def google_link_callback(request: Request, db: Session = Depends(get_db)):
 
     db.add(identity)
     db.commit()
+    db.refresh(identity)
+
+    print("CALLBACK saved identity id =", identity.id)
 
     request.session.pop("google_link_persona_id", None)
 

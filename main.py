@@ -20,7 +20,9 @@ app.include_router(users.router)
 app.include_router(chat.router)
 app.include_router(auth.router)
 
-app.add_middleware(SessionMiddleware, secret_key="change-this-to-a-random-secret")
+app.add_middleware(SessionMiddleware, 
+                   secret_key="change-this-to-a-random-secret",
+                   https_only=False)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 

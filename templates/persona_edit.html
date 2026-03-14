@@ -15,7 +15,8 @@
           <strong>{{ i.provider|capitalize }}</strong>
           <div class="small">{{ i.email or i.name or i.provider_user_id }}</div>
           {% if i.picture %}
-            <div class="small">{{ i.picture }}</div>
+            <img src="{{ i.picture }}" alt="profile picture"
+                style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
           {% endif %}
         </div>
       {% endfor %}
@@ -63,9 +64,18 @@
           <button class="btn primary" type="submit">Save Changes</button>
           <a class="btn" href="/dashboard">Cancel</a>
         </div>
-        <div class="actions" style="margin-top:16px;">
-          <a class="btn" href="/personas/{{ persona.id }}/link/google">Link Google Account</a>
+        <div class="actions" style="margin-top:12px;">
+          {% if google_linked %}
+            <button class="btn" disabled style="opacity:0.5; cursor:not-allowed;">
+              Google Account Linked ✓
+            </button>
+          {% else %}
+            <a class="btn" href="/personas/{{ persona.id }}/link/google">
+              Link Google Account
+            </a>
+          {% endif %}
         </div>
+        
       </form>
 
       {% if error %}
