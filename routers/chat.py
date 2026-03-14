@@ -3,15 +3,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from fastapi.responses import JSONResponse
-from sqlalchemy import func
-from datetime import datetime
-
 from fastapi import WebSocket, WebSocketDisconnect
 from collections import defaultdict
 
 import models
 from database import SessionLocal
+
+from security.identity_policy import IdentityPolicy
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -60,7 +58,7 @@ async def websocket_category_chat(websocket: WebSocket, category: str, persona_i
             await websocket.close(code=1008)
             return
 
-        if (persona.category or "other").strip().lower() != category:
+        if not IdentityPolicy.can_enter_category(persona, category):
             await websocket.close(code=1008)
             return
 
@@ -112,7 +110,7 @@ async def websocket_dm_chat(websocket: WebSocket, thread_id: int, persona_id: in
             await websocket.close(code=1008)
             return
 
-        if persona.id not in (thread.persona_a_id, thread.persona_b_id):
+        if not IdentityPolicy.can_access_dm(persona, thread):
             await websocket.close(code=1008)
             return
 
@@ -212,10 +210,10 @@ def chats_enter(
         .first()
     )
 
-    if not persona or persona.user_id != user_id:
+    if not IdentityPolicy.can_use_persona(user_id, persona):
         return RedirectResponse(url="/chats", status_code=303)
 
-    if (persona.category or "other").strip().lower() != category:
+    if not IdentityPolicy.can_enter_category(persona, category):
         return RedirectResponse(url="/chats", status_code=303)
 
 
@@ -234,10 +232,11 @@ def get_active_persona_for_category(request: Request, db: Session, category: str
         return user_id, None
 
     persona = db.query(models.Persona).filter(models.Persona.id == active_persona_id).first()
-    if not persona or persona.user_id != user_id:
+
+    if not IdentityPolicy.can_use_persona(user_id, persona):
         return user_id, None
 
-    if (persona.category or "other").strip().lower() != category.strip().lower():
+    if not IdentityPolicy.can_enter_category(persona, category):
         return user_id, None
 
     return user_id, persona
@@ -313,20 +312,12 @@ def dm_start(
     active = db.query(models.Persona).filter(models.Persona.id == active_persona_id).first()
     target = db.query(models.Persona).filter(models.Persona.id == target_persona_id).first()
 
-    if not active or active.user_id != user_id:
+    if not IdentityPolicy.can_use_persona(user_id, active):
         return RedirectResponse(url="/chats", status_code=303)
 
-    if not target or not getattr(target, "is_public", False):
-        return RedirectResponse(url=f"/chats/{(active.category or 'other').strip().lower()}", status_code=303)
+    cat_a = IdentityPolicy.normalize_category(active.category)
 
-    # Context-specific rule: only DM within same category
-    cat_a = (active.category or "other").strip().lower()
-    cat_b = (target.category or "other").strip().lower()
-    if cat_a != cat_b:
-        return RedirectResponse(url=f"/chats/{cat_a}", status_code=303)
-
-    # Prevent DM with yourself
-    if active.id == target.id:
+    if not IdentityPolicy.can_start_dm(active, target):
         return RedirectResponse(url=f"/chats/{cat_a}", status_code=303)
 
     # Reuse existing thread regardless of ordering
@@ -364,7 +355,8 @@ def require_active_persona(request: Request, db: Session):
         return user_id, None
 
     persona = db.query(models.Persona).filter(models.Persona.id == active_persona_id).first()
-    if not persona or persona.user_id != user_id:
+
+    if not IdentityPolicy.can_use_persona(user_id, persona):
         return user_id, None
 
     return user_id, persona

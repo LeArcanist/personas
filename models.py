@@ -79,3 +79,22 @@ class DMMessage(Base):
 
     thread = relationship("DMThread")
     sender_persona = relationship("Persona")
+
+class ExternalIdentity(Base):
+    __tablename__ = "external_identities"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    provider = Column(String, nullable=False) 
+
+    provider_user_id = Column(String, nullable=False)
+
+    email = Column(String, nullable=True)
+    name = Column(String, nullable=True)
+    picture = Column(String, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
