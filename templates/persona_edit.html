@@ -5,6 +5,21 @@
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+  <h2 style="margin-top:20px;">Linked External Identities</h2>
+
+    {% if identities|length == 0 %}
+      <p class="small">No external identities linked yet.</p>
+    {% else %}
+      {% for i in identities %}
+        <div class="card" style="padding:14px; margin-bottom:10px;">
+          <strong>{{ i.provider|capitalize }}</strong>
+          <div class="small">{{ i.email or i.name or i.provider_user_id }}</div>
+          {% if i.picture %}
+            <div class="small">{{ i.picture }}</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% endif %}
   <div class="container">
     <div class="card">
       <div class="header">
@@ -47,6 +62,9 @@
         <div class="actions">
           <button class="btn primary" type="submit">Save Changes</button>
           <a class="btn" href="/dashboard">Cancel</a>
+        </div>
+        <div class="actions" style="margin-top:16px;">
+          <a class="btn" href="/personas/{{ persona.id }}/link/google">Link Google Account</a>
         </div>
       </form>
 

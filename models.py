@@ -85,9 +85,9 @@ class ExternalIdentity(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    persona_id = Column(Integer, ForeignKey("personas.id"), nullable=False)
 
-    provider = Column(String, nullable=False) 
+    provider = Column(String, nullable=False)  
 
     provider_user_id = Column(String, nullable=False)
 
@@ -97,4 +97,4 @@ class ExternalIdentity(Base):
 
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    user = relationship("User")
+    persona = relationship("Persona")

@@ -8,10 +8,66 @@ from security.oauth import oauth
 
 router = APIRouter()
 
-@router.get("/login/google")
-async def login_google(request: Request):
-    redirect_uri = request.url_for("auth_google_callback")
+@router.get("/personas/{persona_id}/link/google")
+async def link_google(request: Request, persona_id: int, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    persona = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
+    if not persona or persona.user_id != user_id:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    request.session["link_persona_id"] = persona.id
+
+    redirect_uri = request.url_for("google_link_callback")
     return await oauth.google.authorize_redirect(request, redirect_uri)
+
+@router.get("/auth/google/link/callback", name="google_link_callback")
+async def google_link_callback(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    persona_id = request.session.get("google_link_persona_id")
+
+    if not user_id or not persona_id:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    persona = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
+    if not persona or persona.user_id != user_id:
+        request.session.pop("google_link_persona_id", None)
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    token = await oauth.google.authorize_access_token(request)
+    user_info = token["userinfo"]
+
+    provider = "google"
+    provider_user_id = user_info["sub"]
+
+    existing = (
+        db.query(models.ExternalIdentity)
+        .filter(models.ExternalIdentity.provider == provider)
+        .filter(models.ExternalIdentity.provider_user_id == provider_user_id)
+        .first()
+    )
+
+    if existing:
+        request.session.pop("google_link_persona_id", None)
+        return RedirectResponse(url=f"/personas/{persona.id}", status_code=303)
+
+    identity = models.ExternalIdentity(
+        persona_id=persona.id,
+        provider=provider,
+        provider_user_id=provider_user_id,
+        email=user_info.get("email"),
+        name=user_info.get("name"),
+        picture=user_info.get("picture")
+    )
+
+    db.add(identity)
+    db.commit()
+
+    request.session.pop("google_link_persona_id", None)
+
+    return RedirectResponse(url=f"/personas/{persona.id}", status_code=303)
 
 @router.get("/auth/google/callback")
 async def auth_google_callback(request: Request, db: Session = Depends(get_db)):
