@@ -11,5 +11,3 @@ oauth.register(
         "scope": "openid email profile"
     },
 )
-
-#client_secret="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",
