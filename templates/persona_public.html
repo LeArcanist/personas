@@ -12,7 +12,12 @@
         <a class="btn" href="/">Back</a>
       {% else %}
         <div class="header">
-          <h1>{{ persona.name }}</h1>
+          <h1>
+            {{ persona.name }}
+            {% if verified %}
+              <span class="verified-badge">✓ Verified</span>
+            {% endif %}
+          </h1>
           <p>Category: <strong>{{ persona.category }}</strong> • Public Profile</p>
         </div>
 
@@ -29,6 +34,16 @@
               <button class="btn" type="button" onclick="window.history.back();">
                 Back
               </button>
+              {% if active_persona and can_dm %}
+              <div class="actions" style="margin-top:12px;">
+                <form action="/dm/start" method="post">
+                  <input type="hidden" name="target_persona_id" value="{{ persona.id }}">
+                  <button class="btn primary" type="submit">
+                    DM {{ persona.name }}
+                  </button>
+                </form>
+              </div>
+            {% endif %}
             {% endif %}
           </div>          
       {% endif %}

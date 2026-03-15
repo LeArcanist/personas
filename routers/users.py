@@ -28,6 +28,14 @@ def get_db():
     finally:
         db.close()
 
+def is_persona_verified(db: Session, persona_id: int) -> bool:
+    return (
+        db.query(models.ExternalIdentity)
+        .filter(models.ExternalIdentity.persona_id == persona_id)
+        .first()
+        is not None
+    )
+
 @router.get("/mfa/setup", response_class=HTMLResponse)
 def mfa_setup(request: Request, db: Session = Depends(get_db)):
     user_id = require_user_id(request)
@@ -349,7 +357,8 @@ def view_persona(persona_id: int, request: Request, db: Session = Depends(get_db
             "id": p.id,
             "name": p.name,
             "description": p.description,
-            "owner_username": owner_username
+            "owner_username": owner_username,
+            "is_verified": is_persona_verified(db, p.id),
         })
 
     following = (
@@ -415,15 +424,35 @@ def view_public_persona(username: str, persona_id: int, request: Request, db: Se
         .first()
     )
 
+    user_id = request.session.get("user_id")
+
     if not persona:
         return templates.TemplateResponse(
             "persona_public.html",
             {"request": request, "error": "Public profile not found."}
         )
+    
+    verified = is_persona_verified(db, persona.id)
+
+    active_persona_id = request.session.get("active_persona_id")
+    active_persona = None
+    can_dm = False
+
+    if active_persona_id:
+        active_persona = db.query(models.Persona).filter(models.Persona.id == active_persona_id).first()
+
+        if active_persona and IdentityPolicy.can_use_persona(user_id, active_persona):
+            can_dm = IdentityPolicy.can_start_dm(active_persona, persona)
 
     return templates.TemplateResponse(
         "persona_public.html",
-        {"request": request, "persona": persona}
+        {
+            "request": request, 
+            "persona": persona,
+            "verified": verified,
+            "active_persona": active_persona,
+            "can_dm": can_dm,
+        }
     )
 
 

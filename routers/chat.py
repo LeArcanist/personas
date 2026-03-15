@@ -531,7 +531,6 @@ def dm_thread(thread_id: int, request: Request, db: Session = Depends(get_db)):
         "created_at": m.created_at.isoformat(timespec="seconds"),
         "is_me": (m.sender_persona_id == my_persona_id),
         "is_verified": is_persona_verified(db, m.sender_persona_id),
-        "other_verified": is_persona_verified(db, other.id),
     } for m, sender_name in rows]
 
     return templates.TemplateResponse(
@@ -543,6 +542,7 @@ def dm_thread(thread_id: int, request: Request, db: Session = Depends(get_db)):
             "active_persona": {"id": active.id, "name": active.name},
             "other_persona": other,
             "other_name": other.name if other else "Unknown",
+            "other_verified": is_persona_verified(db, other.id),
             "messages": messages,
             "already_following": already_following,
             "can_follow": can_follow,
