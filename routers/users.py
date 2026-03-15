@@ -10,9 +10,11 @@ import base64
 import pyotp
 import qrcode
 
-from database import SessionLocal
+from database import SessionLocal, get_db
 import models
 from auth_utils import hash_password, verify_password
+
+from security.identity_policy import IdentityPolicy
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -339,12 +341,47 @@ def view_persona(persona_id: int, request: Request, db: Session = Depends(get_db
             "owner_username": owner_username
         })
 
+    following = (
+        db.query(models.Persona)
+        .join(
+            models.PersonaFollow,
+            models.PersonaFollow.following_persona_id == models.Persona.id
+        )
+        .filter(models.PersonaFollow.follower_persona_id == persona.id)
+        .all()
+    )
+
+    followers = (
+        db.query(models.Persona)
+        .join(
+            models.PersonaFollow,
+            models.PersonaFollow.follower_persona_id == models.Persona.id
+        )
+        .filter(models.PersonaFollow.following_persona_id == persona.id)
+        .all()
+    )
+
+    following_ids = {p.id for p in following}
+    follower_ids = {p.id for p in followers}
+    connection_ids = following_ids.intersection(follower_ids)
+
+    connections = (
+        db.query(models.Persona)
+        .filter(models.Persona.id.in_(connection_ids))
+        .all()
+        if connection_ids else []
+    )
+    
+
     return templates.TemplateResponse(
         "persona_view.html",
         {
             "request": request,
             "persona": persona,
-            "others": others_clean
+            "others": others_clean,  
+            "following": following,
+            "followers": followers,
+            "connections": connections,
         }
     )
 
@@ -406,3 +443,69 @@ def create_persona(
     db.commit()
 
     return RedirectResponse(url="/dashboard", status_code=303)
+
+@router.post("/personas/{target_persona_id}/follow")
+def follow_persona(target_persona_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    active_persona_id = request.session.get("active_persona_id")
+
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not active_persona_id:
+        return RedirectResponse(url="/chats", status_code=303)
+
+    follower = db.query(models.Persona).filter(models.Persona.id == active_persona_id).first()
+    target = db.query(models.Persona).filter(models.Persona.id == target_persona_id).first()
+
+    if not IdentityPolicy.can_use_persona(user_id, follower):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    if not IdentityPolicy.can_follow_persona(follower, target):
+        return RedirectResponse(url=f"/personas/{target_persona_id}", status_code=303)
+
+    existing = (
+        db.query(models.PersonaFollow)
+        .filter(models.PersonaFollow.follower_persona_id == follower.id)
+        .filter(models.PersonaFollow.following_persona_id == target.id)
+        .first()
+    )
+
+    if not existing:
+        follow = models.PersonaFollow(
+            follower_persona_id=follower.id,
+            following_persona_id=target.id
+        )
+        db.add(follow)
+        db.commit()
+
+    return RedirectResponse(url=f"/personas/{target_persona_id}", status_code=303)
+
+@router.post("/personas/{target_persona_id}/unfollow")
+def unfollow_persona(target_persona_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    active_persona_id = request.session.get("active_persona_id")
+
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not active_persona_id:
+        return RedirectResponse(url="/chats", status_code=303)
+
+    follower = db.query(models.Persona).filter(models.Persona.id == active_persona_id).first()
+
+    if not IdentityPolicy.can_use_persona(user_id, follower):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    follow = (
+        db.query(models.PersonaFollow)
+        .filter(models.PersonaFollow.follower_persona_id == follower.id)
+        .filter(models.PersonaFollow.following_persona_id == target_persona_id)
+        .first()
+    )
+
+    if follow:
+        db.delete(follow)
+        db.commit()
+
+    return RedirectResponse(url=f"/personas/{target_persona_id}", status_code=303)

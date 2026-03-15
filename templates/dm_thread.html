@@ -10,13 +10,29 @@
       <div class="header">
         <h1>DM • {{ category.capitalize() }}</h1>
         <p><strong>{{ active_persona.name }}</strong> ↔ <strong>{{ other_name }}</strong></p>
+        {% if can_follow %}
+        <div class="actions" style="margin-top:10px;">
+          {% if already_following %}
+            <form action="/personas/{{ other_persona.id }}/unfollow" method="post">
+              <button class="btn" type="submit">
+                Unfollow {{ other_persona.name }}
+              </button>
+            </form>
+          {% else %}
+            <form action="/personas/{{ other_persona.id }}/follow" method="post">
+              <button class="btn primary" type="submit">
+                Follow {{ other_persona.name }}
+              </button>
+            </form>
+          {% endif %}
+        </div>
+      {% endif %}
       </div>
 
       <div class="actions" style="margin-top:16px;">
         <a class="btn" href="/dm">Inbox</a>
         <a class="btn" href="/chats/{{ category }}">Back to {{ category.capitalize() }} Chat</a>
       </div>
-
       <div id="chatBox" class="card" style="padding:16px; margin-top:16px; height:360px; overflow:auto;">
         {% if messages|length == 0 %}
           <div class="small" id="emptyMessage">No messages yet. Say hi.</div>

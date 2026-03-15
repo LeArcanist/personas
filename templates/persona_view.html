@@ -50,6 +50,51 @@
             </div>
           {% endfor %}
         </div>
+
+        <h2 style="margin-top:24px;">Following</h2>
+        {% if following|length == 0 %}
+          <p class="small">This persona is not following anyone yet.</p>
+        {% else %}
+          {% for p in following %}
+            <div class="card" style="padding:12px; margin-bottom:10px;">
+              <strong>{{ p.name }}</strong>
+              <div class="small">{{ p.category.capitalize() }}</div>
+              {% if p.description %}
+                <div class="small">{{ p.description }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <h2 style="margin-top:24px;">Followers</h2>
+        {% if followers|length == 0 %}
+          <p class="small">No followers yet.</p>
+        {% else %}
+          {% for p in followers %}
+            <div class="card" style="padding:12px; margin-bottom:10px;">
+              <strong>{{ p.name }}</strong>
+              <div class="small">{{ p.category.capitalize() }}</div>
+              {% if p.description %}
+                <div class="small">{{ p.description }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <h2 style="margin-top:24px;">Connections</h2>
+        {% if connections|length == 0 %}
+          <p class="small">No mutual connections yet.</p>
+        {% else %}
+          {% for p in connections %}
+            <div class="card" style="padding:12px; margin-bottom:10px;">
+              <strong>{{ p.name }}</strong>
+              <div class="small">{{ p.category.capitalize() }}</div>
+              {% if p.description %}
+                <div class="small">{{ p.description }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% endif %}
       {% endif %}
     </div>
   </div>

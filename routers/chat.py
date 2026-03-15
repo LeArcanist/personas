@@ -457,6 +457,18 @@ def dm_thread(thread_id: int, request: Request, db: Session = Depends(get_db)):
     other_id = thread.persona_b_id if my_persona_id == thread.persona_a_id else thread.persona_a_id
     other = db.query(models.Persona).filter(models.Persona.id == other_id).first()
 
+    active_persona = active
+
+    already_following = (
+        db.query(models.PersonaFollow)
+        .filter(models.PersonaFollow.follower_persona_id == active_persona.id)
+        .filter(models.PersonaFollow.following_persona_id == other.id)
+        .first()
+        is not None
+    )
+
+    can_follow = IdentityPolicy.can_follow_persona(active_persona, other)
+
     rows = (
         db.query(models.DMMessage, models.Persona.name)
         .join(models.Persona, models.Persona.id == models.DMMessage.sender_persona_id)
@@ -482,8 +494,11 @@ def dm_thread(thread_id: int, request: Request, db: Session = Depends(get_db)):
             "thread_id": thread.id,
             "category": thread.category,
             "active_persona": {"id": active.id, "name": active.name},
+            "other_persona": other,
             "other_name": other.name if other else "Unknown",
             "messages": messages,
+            "already_following": already_following,
+            "can_follow": can_follow,
         }
     )
 

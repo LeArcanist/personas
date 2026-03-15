@@ -41,3 +41,19 @@ class IdentityPolicy:
     @staticmethod
     def can_use_persona(user_id: int, persona) -> bool:
         return persona is not None and persona.user_id == user_id
+
+    @staticmethod
+    def can_follow_persona(follower_persona, target_persona) -> bool:
+        if not follower_persona or not target_persona:
+            return False
+
+        if follower_persona.id == target_persona.id:
+            return False
+
+        if not getattr(target_persona, "is_public", False):
+            return False
+
+        return (
+            IdentityPolicy.normalize_category(follower_persona.category)
+            == IdentityPolicy.normalize_category(target_persona.category)
+        )

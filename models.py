@@ -98,3 +98,19 @@ class ExternalIdentity(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     persona = relationship("Persona")
+    
+
+class PersonaFollow(Base):
+    __tablename__ = "persona_follows"
+
+    id = Column(Integer, primary_key=True, index=True)
+    follower_persona_id = Column(Integer, ForeignKey("personas.id"), nullable=False)
+    following_persona_id = Column(Integer, ForeignKey("personas.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    follower_persona = relationship("Persona", foreign_keys=[follower_persona_id])
+    following_persona = relationship("Persona", foreign_keys=[following_persona_id])
+
+
+
+
