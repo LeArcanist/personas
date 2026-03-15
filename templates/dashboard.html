@@ -3,57 +3,186 @@
 <head>
   <title>Dashboard</title>
   <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    .dashboard-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) 360px;
+      gap: 20px;
+      align-items: start;
+      margin-top: 20px;
+    }
+
+    .dashboard-main {
+      min-width: 0;
+    }
+
+    .dashboard-sidebar {
+      min-width: 0;
+    }
+
+    .notifications-card {
+      position: sticky;
+      top: 20px;
+    }
+
+    .notifications-list {
+      max-height: 75vh;
+      overflow-y: auto;
+      margin-top: 12px;
+    }
+
+    .notification-item {
+      word-break: break-word;
+    }
+
+    @media (max-width: 1000px) {
+      .dashboard-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .notifications-card {
+        position: static;
+      }
+
+      .notifications-list {
+        max-height: none;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="actions" style="margin-top:16px;">
-    <a class="btn" href="/mfa/setup">Enable MFA (Authenticator)</a>
-    <a class="btn" href="/logout">Logout</a>
-  </div>
-  <div class="actions" style="margin-top:16px;">
-    <a class="btn" href="/chats">Chats</a>
-    <a class="btn" href="/dm">DM Inbox</a>
-  </div>
   <div class="container">
-    <div class="card">
-      <div class="header">
-        <h1>Dashboard</h1>
-        <p>Welcome, {{ user.username }}. Manage your profiles here.</p>
-      </div>
+    <div class="actions" style="margin-top:16px;">
+      <a class="btn" href="/mfa/setup">Enable MFA (Authenticator)</a>
+      <a class="btn" href="/logout">Logout</a>
+    </div>
 
-      <div class="actions" style="margin-top:16px;">
-        <a class="btn primary" href="/personas/new">Create New Profile</a>
-        <a class="btn" href="/logout">Logout</a>
-      </div>
+    <div class="actions" style="margin-top:16px;">
+      <a class="btn" href="/chats">Chats</a>
+      <a class="btn" href="/dm">DM Inbox</a>
+    </div>
 
-      <hr style="margin:18px 0; border:0; border-top:1px solid rgba(255,255,255,0.14);">
+    <div class="dashboard-layout">
 
-      <h2 style="margin:0 0 10px;">Your Profiles</h2>
+      <div class="dashboard-main">
+        <div class="card">
+          <div class="header">
+            <h1>Dashboard</h1>
+            <p>Welcome, {{ user.username }}. Manage your profiles here.</p>
+          </div>
 
-      {% if personas|length == 0 %}
-        <p class="small">No profiles yet. Create your first persona (e.g., gaming, professional, religious).</p>
-      {% else %}
-        <div class="grid" style="grid-template-columns: 1fr; gap: 10px;">
-          {% for p in personas %}
-            <div class="card" style="padding:16px;">
-              {{ p.name }}
-              <div class="small">{{ p.category }}</div>
-              {% if p.description %}
-                <div class="small">{{ p.description }}</div>
-              {% endif %}
-              <div class="small">
-                Visibility: {{ "Public" if p.is_public else "Private" }}
-              </div>
-              <strong>
-                <a class="btn" style="padding:6px 10px;" href="/personas/{{ p.id }}">Open</a>
-              </strong>              
-              <div class="actions" style="margin-top:10px;">
-                <a class="btn" href="/personas/{{ p.id }}/edit">Edit</a>
-              </div>
+          <div class="actions" style="margin-top:16px;">
+            <a class="btn primary" href="/personas/new">Create New Profile</a>
+            <a class="btn" href="/logout">Logout</a>
+          </div>
+
+          <hr style="margin:18px 0; border:0; border-top:1px solid rgba(255,255,255,0.14);">
+
+          <h2 style="margin:0 0 10px;">Your Profiles</h2>
+
+          {% if personas|length == 0 %}
+            <p class="small">No profiles yet. Create your first persona (e.g., gaming, professional, religious).</p>
+          {% else %}
+            <div class="grid" style="grid-template-columns: 1fr; gap: 10px;">
+              {% for p in personas %}
+                <div class="card" style="padding:16px;">
+                  {{ p.name }}
+                  <div class="small">{{ p.category }}</div>
+                  {% if p.description %}
+                    <div class="small">{{ p.description }}</div>
+                  {% endif %}
+                  <div class="small">
+                    Visibility: {{ "Public" if p.is_public else "Private" }}
+                  </div>
+
+                  <div class="actions" style="margin-top:10px;">
+                    <a class="btn" href="/personas/{{ p.id }}">Open</a>
+                    <a class="btn" href="/personas/{{ p.id }}/edit">Edit</a>
+                  </div>
+                </div>
+              {% endfor %}
             </div>
-          {% endfor %}
+          {% endif %}
         </div>
-      {% endif %}
+      </div>
+
+      <aside class="dashboard-sidebar">
+        <div class="card notifications-card">
+          <div class="header">
+            <h2>Notifications</h2>
+            <p>Live updates</p>
+          </div>
+
+          <div id="notificationList" class="notifications-list">
+            {% if notifications|length == 0 %}
+              <p class="small" id="noNotificationsText">No notifications yet.</p>
+            {% else %}
+              {% for n in notifications %}
+                <div class="card notification-item" style="padding:12px; margin-bottom:10px;" data-notification-id="{{ n.id }}">
+                  <strong>{{ n.title }}</strong>
+                  {% if n.message %}
+                    <div class="small">{{ n.message }}</div>
+                  {% endif %}
+                  {% if n.link %}
+                    <div style="margin-top:8px;">
+                      <a class="btn" href="{{ n.link }}">Open</a>
+                    </div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+      </aside>
+
     </div>
   </div>
+
+  <script>
+    const userId = {{ user.id }};
+    const notificationList = document.getElementById("notificationList");
+
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const socket = new WebSocket(`${protocol}://${window.location.host}/ws/notifications/${userId}`);
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function appendNotification(n) {
+      const emptyText = document.getElementById("noNotificationsText");
+      if (emptyText) {
+        emptyText.remove();
+      }
+
+      const wrap = document.createElement("div");
+      wrap.className = "card notification-item";
+      wrap.style.padding = "12px";
+      wrap.style.marginBottom = "10px";
+      wrap.dataset.notificationId = n.id;
+
+      wrap.innerHTML = `
+        <strong>${escapeHtml(n.title)}</strong>
+        ${n.message ? `<div class="small">${escapeHtml(n.message)}</div>` : ""}
+        ${n.link ? `<div style="margin-top:8px;"><a class="btn" href="${escapeHtml(n.link)}">Open</a></div>` : ""}
+      `;
+
+      notificationList.prepend(wrap);
+    }
+
+    socket.onopen = function() {
+      socket.send("ready");
+    };
+
+    socket.onmessage = function(event) {
+      const data = JSON.parse(event.data);
+      appendNotification(data);
+    };
+  </script>
 </body>
 </html>

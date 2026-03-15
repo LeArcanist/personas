@@ -3,6 +3,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from routers.chat import notification_manager
+
 
 # mfa
 import io
@@ -228,12 +230,21 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     personas = db.query(models.Persona).filter(models.Persona.user_id == user_id).all()
 
+    notifications = (
+        db.query(models.Notification)
+        .filter(models.Notification.user_id == user.id)
+        .order_by(models.Notification.id.desc())
+        .limit(20)
+        .all()
+    )
+
     return templates.TemplateResponse(
         "dashboard.html",
         {
             "request": request,
             "user": user,
-            "personas": personas
+            "personas": personas,
+            "notifications": notifications,
         }
     )
 
@@ -445,7 +456,7 @@ def create_persona(
     return RedirectResponse(url="/dashboard", status_code=303)
 
 @router.post("/personas/{target_persona_id}/follow")
-def follow_persona(target_persona_id: int, request: Request, db: Session = Depends(get_db)):
+async def follow_persona(target_persona_id: int, request: Request, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
     active_persona_id = request.session.get("active_persona_id")
 
@@ -478,6 +489,29 @@ def follow_persona(target_persona_id: int, request: Request, db: Session = Depen
         )
         db.add(follow)
         db.commit()
+
+        notif = models.Notification(
+            user_id=target.user_id,
+            type="persona_follow",
+            title=f"{follower.name} followed {target.name}",
+            message=f"{follower.name} is now following this persona.",
+            link=f"/personas/{target.id}"
+        )
+        db.add(notif)
+        db.commit()
+        db.refresh(notif)
+
+        await notification_manager.send_to_user(
+            target.user_id,
+            {
+                "id": notif.id,
+                "type": notif.type,
+                "title": notif.title,
+                "message": notif.message,
+                "link": notif.link,
+                "created_at": notif.created_at.isoformat(timespec="seconds"),
+            }
+        )
 
     return RedirectResponse(url=f"/personas/{target_persona_id}", status_code=303)
 

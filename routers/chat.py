@@ -136,6 +136,35 @@ async def websocket_dm_chat(websocket: WebSocket, thread_id: int, persona_id: in
             db.commit()
             db.refresh(msg)
 
+            other_persona_id = thread.persona_b_id if persona.id == thread.persona_a_id else thread.persona_a_id
+            other_persona = db.query(models.Persona).filter(models.Persona.id == other_persona_id).first()
+
+            if other_persona:
+                recipient_user_id = other_persona.user_id
+
+                notif = models.Notification(
+                    user_id=recipient_user_id,
+                    type="dm_message",
+                    title=f"New DM from {persona.name}",
+                    message=content,
+                    link=f"/dm/{thread.id}"
+                )
+                db.add(notif)
+                db.commit()
+                db.refresh(notif)
+
+                await notification_manager.send_to_user(
+                    recipient_user_id,
+                    {
+                        "id": notif.id,
+                        "type": notif.type,
+                        "title": notif.title,
+                        "message": notif.message,
+                        "link": notif.link,
+                        "created_at": notif.created_at.isoformat(timespec="seconds"),
+                    }
+                )
+
             payload = {
                 "id": msg.id,
                 "sender_name": persona.name,
@@ -502,3 +531,37 @@ def dm_thread(thread_id: int, request: Request, db: Session = Depends(get_db)):
         }
     )
 
+class NotificationManager:
+    def __init__(self):
+        self.active_connections = defaultdict(list)  # user_id -> sockets
+
+    async def connect(self, user_id: int, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections[user_id].append(websocket)
+
+    def disconnect(self, user_id: int, websocket: WebSocket):
+        if websocket in self.active_connections[user_id]:
+            self.active_connections[user_id].remove(websocket)
+
+    async def send_to_user(self, user_id: int, payload: dict):
+        dead = []
+        for ws in self.active_connections[user_id]:
+            try:
+                await ws.send_json(payload)
+            except Exception:
+                dead.append(ws)
+
+        for ws in dead:
+            self.disconnect(user_id, ws)
+
+notification_manager = NotificationManager()
+
+@router.websocket("/ws/notifications/{user_id}")
+async def websocket_notifications(websocket: WebSocket, user_id: int):
+    # prototype version; later verify against session properly
+    await notification_manager.connect(user_id, websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        notification_manager.disconnect(user_id, websocket)
