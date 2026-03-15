@@ -382,14 +382,22 @@ def view_persona(persona_id: int, request: Request, db: Session = Depends(get_db
         .all()
         if connection_ids else []
     )
-    
 
+    identities = (
+        db.query(models.ExternalIdentity)
+        .filter(models.ExternalIdentity.persona_id == persona.id)
+        .all()
+    )
+
+    verified = len(identities) > 0
+    
     return templates.TemplateResponse(
         "persona_view.html",
         {
             "request": request,
             "persona": persona,
-            "others": others_clean,  
+            "others": others_clean,
+            "verified": verified,
             "following": following,
             "followers": followers,
             "connections": connections,

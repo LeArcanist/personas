@@ -82,4 +82,18 @@
   .alert.success { border-color: rgba(90,255,170,0.45); background: rgba(90,255,170,0.10); }
   
   .small { font-size: 13px; color: var(--muted); }
+
+
+  .verified-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: rgba(80, 180, 120, 0.18);
+    border: 1px solid rgba(80, 180, 120, 0.35);
+    color: #9be3b1;
+    vertical-align: middle;
+  }
   

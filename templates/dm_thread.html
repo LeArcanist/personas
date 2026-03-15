@@ -9,7 +9,11 @@
     <div class="card">
       <div class="header">
         <h1>DM • {{ category.capitalize() }}</h1>
-        <p><strong>{{ active_persona.name }}</strong> ↔ <strong>{{ other_name }}</strong></p>
+        <p><strong>{{ active_persona.name }}</strong> ↔ <strong>{{ other_name }}</strong>
+          {% if other_verified %}
+          <span class="verified-badge">✓ Verified</span>
+        {% endif %}
+        </p>
         {% if can_follow %}
         <div class="actions" style="margin-top:10px;">
           {% if already_following %}
@@ -42,6 +46,9 @@
           <div class="card" style="padding:10px; margin-bottom:10px;" data-msg-id="{{ m.id }}">
             <div class="small">
               <strong>{{ m.sender_name }}</strong>
+              {% if m.is_verified %}
+                <span class="verified-badge">✓ Verified</span>
+              {% endif %}
               • {{ m.created_at }}
               {% if m.is_me %} • (you){% endif %}
             </div>
@@ -93,6 +100,7 @@
       wrap.innerHTML = `
         <div class="small">
           <strong>${escapeHtml(m.sender_name)}</strong>
+          ${m.is_verified ? `<span class="verified-badge">✓ Verified</span>` : ""}
           • ${escapeHtml(m.created_at)}
           ${m.is_me ? " • (you)" : ""}
         </div>

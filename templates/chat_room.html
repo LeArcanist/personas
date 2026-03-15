@@ -27,6 +27,9 @@
           <div class="card" style="padding:10px; margin-bottom:10px;" data-msg-id="{{ m.id }}">
             <div class="small">
               <strong>{{ m.sender_name }}</strong>
+              {% if m.is_verified %}
+                <span class="verified-badge">✓ Verified</span>
+              {% endif %}
               • {{ m.created_at }}
               {% if m.is_me %} • (you){% endif %}
             </div>
@@ -46,6 +49,9 @@
           {% for p in people %}
             <div class="card" style="padding:14px;">
               <strong>{{ p.name }}</strong>
+              {% if p.is_verified %}
+                <span class="verified-badge">✓ Verified</span>
+              {% endif %}
               {% if p.description %}
                 <div class="small">{{ p.description }}</div>
               {% endif %}
@@ -99,6 +105,7 @@
       wrap.innerHTML = `
         <div class="small">
           <strong>${escapeHtml(m.sender_name)}</strong>
+          ${m.is_verified ? `<span class="verified-badge">✓ Verified</span>` : ""}
           • ${escapeHtml(m.created_at)}
         </div>
         <div>${escapeHtml(m.content)}</div>

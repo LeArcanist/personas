@@ -1,3 +1,5 @@
+import models
+
 class IdentityPolicy:
     @staticmethod
     def normalize_category(category: str | None) -> str:
@@ -57,3 +59,17 @@ class IdentityPolicy:
             IdentityPolicy.normalize_category(follower_persona.category)
             == IdentityPolicy.normalize_category(target_persona.category)
         )
+
+    @staticmethod
+    def is_persona_verified(persona, db) -> bool:
+        if not persona:
+            return False
+
+        linked_identity = (
+            db.query(models.ExternalIdentity)
+            .filter(models.ExternalIdentity.persona_id == persona.id)
+            .first()
+        )
+
+        return linked_identity is not None
+

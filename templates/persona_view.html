@@ -8,7 +8,12 @@
   <div class="container">
     <div class="card">
       <div class="header">
-        <h1>{{ persona.name }}</h1>
+        <h1>
+          {{ persona.name }}
+          {% if verified %}
+            <span class="verified-badge">✓ Verified</span>
+          {% endif %}
+        </h1>
         <p>
           Category: <strong>{{ persona.category }}</strong> •
           Visibility: <strong>{{ "Public" if persona.is_public else "Private" }}</strong>

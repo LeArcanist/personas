@@ -21,6 +21,14 @@ def get_db():
     finally:
         db.close()
 
+def is_persona_verified(db: Session, persona_id: int) -> bool:
+    return (
+        db.query(models.ExternalIdentity)
+        .filter(models.ExternalIdentity.persona_id == persona_id)
+        .first()
+        is not None
+    )
+
 class ConnectionManager:
     def __init__(self):
         self.active_connections = defaultdict(list) 
@@ -88,7 +96,8 @@ async def websocket_category_chat(websocket: WebSocket, category: str, persona_i
                 "sender_name": persona.name,
                 "content": msg.content,
                 "created_at": msg.created_at.isoformat(timespec="seconds"),
-                "is_me": False
+                "is_me": False,
+                "is_verified": is_persona_verified(db, persona.id),
             }
 
             await manager.broadcast(category, payload)
@@ -170,7 +179,8 @@ async def websocket_dm_chat(websocket: WebSocket, thread_id: int, persona_id: in
                 "sender_name": persona.name,
                 "content": msg.content,
                 "created_at": msg.created_at.isoformat(timespec="seconds"),
-                "is_me": False
+                "is_me": False,
+                "is_verified": is_persona_verified(db, persona.id),
             }
 
             await manager.broadcast(room_key, payload)
@@ -296,6 +306,7 @@ def chats_room(category: str, request: Request, db: Session = Depends(get_db)):
         "content": m.content,
         "created_at": m.created_at.isoformat(timespec="seconds"),
         "is_me": (m.sender_persona_id == active_persona.id),
+        "is_verified": is_persona_verified(db, m.sender_persona_id),
     } for m, sender_name in rows]
 
     people = (
@@ -309,7 +320,12 @@ def chats_room(category: str, request: Request, db: Session = Depends(get_db)):
     )
 
     people_data = [
-        {"id": p.id, "name": p.name, "description": p.description}
+        {
+            "id": p.id,
+            "name": p.name,
+            "description": p.description,
+            "is_verified": is_persona_verified(db, p.id),
+        }
         for p in people
     ]
 
@@ -514,6 +530,8 @@ def dm_thread(thread_id: int, request: Request, db: Session = Depends(get_db)):
         "content": m.content,
         "created_at": m.created_at.isoformat(timespec="seconds"),
         "is_me": (m.sender_persona_id == my_persona_id),
+        "is_verified": is_persona_verified(db, m.sender_persona_id),
+        "other_verified": is_persona_verified(db, other.id),
     } for m, sender_name in rows]
 
     return templates.TemplateResponse(
