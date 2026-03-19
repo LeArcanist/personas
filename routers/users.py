@@ -237,18 +237,32 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(url="/login", status_code=303)
 
     user = db.query(models.User).filter(models.User.id == user_id).first()
-    personas = db.query(models.Persona).filter(models.Persona.user_id == user_id).all()
+    raw_personas = db.query(models.Persona).filter(models.Persona.user_id == user_id).all()
 
     grouped = defaultdict(list)
 
-    for p in personas:
+    for p in raw_personas:
+        identities = (
+            db.query(models.ExternalIdentity)
+            .filter(models.ExternalIdentity.persona_id == p.id)
+            .all()
+        )
+
         cat = (p.category or "other").lower()
-        grouped[cat].append(p)
+        grouped[cat].append({
+            "id": p.id,
+            "name": p.name,
+            "category": p.category,
+            "description": p.description,
+            "is_public": p.is_public,
+            "is_verified": len(identities) > 0,
+            "providers": [i.provider for i in identities],
+        })
 
     grouped_sorted = {
-        cat: sorted(grouped[cat], key=lambda x: x.name.lower())
+        cat: sorted(grouped[cat], key=lambda x: x["name"].lower())
         for cat in sorted(grouped.keys())
-}
+    }
 
     notifications = (
         db.query(models.Notification)

@@ -97,11 +97,25 @@
                       <div class="card" style="padding:16px; margin-bottom:10px;">
                         <strong style="font-size:16px;">{{ p.name }}</strong>
 
+                        <strong style="font-size:16px;">{{ p.name }}</strong>
+                        {% if p.is_verified %}
+                          <span class="verified-badge">✓ Verified</span>
+                        {% endif %}
+
                         <div class="small">{{ p.category }}</div>
 
                         {% if p.description %}
                           <div class="small">{{ p.description }}</div>
                         {% endif %}
+
+                        {% if p.providers %}
+                        <div class="small" style="margin-top:6px;">
+                          Linked:
+                          {% for provider in p.providers %}
+                            <span class="provider-badge">{{ provider|capitalize }}</span>
+                          {% endfor %}
+                        </div>
+                      {% endif %}
 
                         <div class="small" style="margin-top:6px;">
                           Visibility: {{ "Public" if p.is_public else "Private" }}
