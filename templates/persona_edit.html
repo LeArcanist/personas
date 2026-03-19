@@ -74,6 +74,16 @@
               Link Google Account
             </a>
           {% endif %}
+
+          {% if steam_linked %}
+          <button class="btn" disabled style="opacity:0.5;">
+            Steam Linked ✓
+          </button>
+          {% else %}
+            <a class="btn" href="/personas/{{ persona.id }}/link/steam">
+              Link Steam Account
+            </a>
+          {% endif %}
         </div>
         
       </form>

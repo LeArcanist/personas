@@ -53,7 +53,8 @@
 <body>
   <div class="container">
     <div class="actions" style="margin-top:16px;">
-      <a class="btn" href="/mfa/setup">Enable MFA (Authenticator)</a>
+      <a class="btn" href="/mfa/setup">Enable MFA</a>
+      <a class="btn" href="/account/edit">Edit Account</a>
       <a class="btn" href="/logout">Logout</a>
     </div>
 
@@ -83,21 +84,35 @@
           {% if personas|length == 0 %}
             <p class="small">No profiles yet. Create your first persona (e.g., gaming, professional, religious).</p>
           {% else %}
-            <div class="grid" style="grid-template-columns: 1fr; gap: 10px;">
-              {% for p in personas %}
-                <div class="card" style="padding:16px;">
-                  {{ p.name }}
-                  <div class="small">{{ p.category }}</div>
-                  {% if p.description %}
-                    <div class="small">{{ p.description }}</div>
-                  {% endif %}
-                  <div class="small">
-                    Visibility: {{ "Public" if p.is_public else "Private" }}
+            <div class="persona-groups">
+              {% for category, plist in personas.items() %}
+                <div class="category-block">
+                  <div class="category-header" onclick="toggleCategory('{{ category }}')">
+                    <strong>{{ category|capitalize }}</strong>
+                    <span id="arrow-{{ category }}">▼</span>
                   </div>
 
-                  <div class="actions" style="margin-top:10px;">
-                    <a class="btn" href="/personas/{{ p.id }}">Open</a>
-                    <a class="btn" href="/personas/{{ p.id }}/edit">Edit</a>
+                  <div class="category-content" id="content-{{ category }}" style="display: block;">
+                    {% for p in plist %}
+                      <div class="card" style="padding:16px; margin-bottom:10px;">
+                        <strong style="font-size:16px;">{{ p.name }}</strong>
+
+                        <div class="small">{{ p.category }}</div>
+
+                        {% if p.description %}
+                          <div class="small">{{ p.description }}</div>
+                        {% endif %}
+
+                        <div class="small" style="margin-top:6px;">
+                          Visibility: {{ "Public" if p.is_public else "Private" }}
+                        </div>
+
+                        <div class="actions" style="margin-top:10px;">
+                          <a class="btn" href="/personas/{{ p.id }}">Open</a>
+                          <a class="btn" href="/personas/{{ p.id }}/edit">Edit</a>
+                        </div>
+                      </div>
+                    {% endfor %}
                   </div>
                 </div>
               {% endfor %}
@@ -141,10 +156,10 @@
   <script>
     const userId = {{ user.id }};
     const notificationList = document.getElementById("notificationList");
-
+  
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     const socket = new WebSocket(`${protocol}://${window.location.host}/ws/notifications/${userId}`);
-
+  
     function escapeHtml(str) {
       return String(str)
         .replaceAll("&", "&amp;")
@@ -153,36 +168,49 @@
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
     }
-
+  
     function appendNotification(n) {
       const emptyText = document.getElementById("noNotificationsText");
       if (emptyText) {
         emptyText.remove();
       }
-
+  
       const wrap = document.createElement("div");
       wrap.className = "card notification-item";
       wrap.style.padding = "12px";
       wrap.style.marginBottom = "10px";
       wrap.dataset.notificationId = n.id;
-
+  
       wrap.innerHTML = `
         <strong>${escapeHtml(n.title)}</strong>
         ${n.message ? `<div class="small">${escapeHtml(n.message)}</div>` : ""}
         ${n.link ? `<div style="margin-top:8px;"><a class="btn" href="${escapeHtml(n.link)}">Open</a></div>` : ""}
       `;
-
+  
       notificationList.prepend(wrap);
     }
-
+  
     socket.onopen = function() {
       socket.send("ready");
     };
-
+  
     socket.onmessage = function(event) {
       const data = JSON.parse(event.data);
       appendNotification(data);
     };
+  
+    function toggleCategory(category) {
+      const content = document.getElementById("content-" + category);
+      const arrow = document.getElementById("arrow-" + category);
+  
+      if (content.style.display === "none") {
+        content.style.display = "block";
+        arrow.innerText = "▼";
+      } else {
+        content.style.display = "none";
+        arrow.innerText = "▶";
+      }
+    }
   </script>
 </body>
 </html>

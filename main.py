@@ -6,11 +6,9 @@ from sqlalchemy.orm import Session
 
 from starlette.middleware.sessions import SessionMiddleware
 
-from routers import chat
-
 from database import engine, SessionLocal
 import models
-from routers import users, auth
+from routers import users, auth, chat, api, steam
 from auth_utils import hash_password
 
 models.Base.metadata.create_all(bind=engine)
@@ -19,6 +17,8 @@ app = FastAPI()
 app.include_router(users.router)
 app.include_router(chat.router)
 app.include_router(auth.router)
+app.include_router(api.router)
+app.include_router(steam.router)
 
 app.add_middleware(SessionMiddleware, 
                    secret_key="change-this-to-a-random-secret",

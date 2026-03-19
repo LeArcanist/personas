@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edit Account</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <h1>Edit Account</h1>
+        <p>Update your account details here.</p>
+      </div>
+
+      <form class="form" action="/account/edit" method="post">
+        <div>
+          <div class="label">Username</div>
+          <input class="input" type="text" name="username" value="{{ user.username }}" required>
+        </div>
+
+        <div>
+          <div class="label">Email</div>
+          <input class="input" type="email" name="email" value="{{ user.email }}" required>
+        </div>
+
+        <hr style="margin:18px 0; border:0; border-top:1px solid rgba(255,255,255,0.14);">
+
+        <div>
+          <div class="label">Current Password</div>
+          <input class="input" type="password" name="current_password" placeholder="Required only if changing password">
+        </div>
+
+        <div>
+          <div class="label">New Password</div>
+          <input class="input" type="password" name="new_password" placeholder="Leave blank to keep current password">
+        </div>
+
+        <div>
+          <div class="label">Confirm New Password</div>
+          <input class="input" type="password" name="confirm_password" placeholder="Repeat new password">
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" type="submit">Save Changes</button>
+          <a class="btn" href="/dashboard">Back to Dashboard</a>
+        </div>
+      </form>
+
+      {% if error %}
+        <div class="alert error">{{ error }}</div>
+      {% endif %}
+
+      {% if success %}
+        <div class="alert success">{{ success }}</div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

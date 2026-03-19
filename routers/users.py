@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from routers.chat import notification_manager
 
+from collections import defaultdict
 
 # mfa
 import io
@@ -238,6 +239,17 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     personas = db.query(models.Persona).filter(models.Persona.user_id == user_id).all()
 
+    grouped = defaultdict(list)
+
+    for p in personas:
+        cat = (p.category or "other").lower()
+        grouped[cat].append(p)
+
+    grouped_sorted = {
+        cat: sorted(grouped[cat], key=lambda x: x.name.lower())
+        for cat in sorted(grouped.keys())
+}
+
     notifications = (
         db.query(models.Notification)
         .filter(models.Notification.user_id == user.id)
@@ -251,7 +263,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         {
             "request": request,
             "user": user,
-            "personas": personas,
+            "personas": grouped_sorted,
             "notifications": notifications,
         }
     )
@@ -282,7 +294,7 @@ def edit_persona_form(persona_id: int, request: Request, db: Session = Depends(g
     )
 
     google_linked = any(i.provider == "google" for i in identities)
-
+    steam_linked = any(i.provider == "steam" for i in identities)
 
     return templates.TemplateResponse(
         "persona_edit.html",
@@ -580,3 +592,129 @@ def unfollow_persona(target_persona_id: int, request: Request, db: Session = Dep
         db.commit()
 
     return RedirectResponse(url=f"/personas/{target_persona_id}", status_code=303)
+
+@router.get("/account/edit", response_class=HTMLResponse)
+def edit_account_form(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        request.session.clear()
+        return RedirectResponse(url="/login", status_code=303)
+
+    return templates.TemplateResponse(
+        "account_edit.html",
+        {
+            "request": request,
+            "user": user,
+        }
+    )
+
+
+@router.post("/account/edit", response_class=HTMLResponse)
+def edit_account_save(
+    request: Request,
+    username: str = Form(...),
+    email: str = Form(...),
+    current_password: str = Form(""),
+    new_password: str = Form(""),
+    confirm_password: str = Form(""),
+    db: Session = Depends(get_db)
+):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        request.session.clear()
+        return RedirectResponse(url="/login", status_code=303)
+
+    username = username.strip()
+    email = email.strip().lower()
+
+    # check username uniqueness
+    username_taken = (
+        db.query(models.User)
+        .filter(models.User.username == username)
+        .filter(models.User.id != user.id)
+        .first()
+    )
+    if username_taken:
+        return templates.TemplateResponse(
+            "account_edit.html",
+            {
+                "request": request,
+                "user": user,
+                "error": "That username is already taken."
+            }
+        )
+
+    # check email uniqueness
+    email_taken = (
+        db.query(models.User)
+        .filter(models.User.email == email)
+        .filter(models.User.id != user.id)
+        .first()
+    )
+    if email_taken:
+        return templates.TemplateResponse(
+            "account_edit.html",
+            {
+                "request": request,
+                "user": user,
+                "error": "That email is already in use."
+            }
+        )
+
+    # password change logic (optional)
+    if new_password or confirm_password:
+        if not current_password:
+            return templates.TemplateResponse(
+                "account_edit.html",
+                {
+                    "request": request,
+                    "user": user,
+                    "error": "Enter your current password to change password."
+                }
+            )
+
+        if not verify_password(current_password, user.password_hash):
+            return templates.TemplateResponse(
+                "account_edit.html",
+                {
+                    "request": request,
+                    "user": user,
+                    "error": "Current password is incorrect."
+                }
+            )
+
+        if new_password != confirm_password:
+            return templates.TemplateResponse(
+                "account_edit.html",
+                {
+                    "request": request,
+                    "user": user,
+                    "error": "New passwords do not match."
+                }
+            )
+
+        user.password_hash = hash_password(new_password)
+
+    user.username = username
+    user.email = email
+
+    db.commit()
+
+    request.session["username"] = user.username
+
+    return templates.TemplateResponse(
+        "account_edit.html",
+        {
+            "request": request,
+            "user": user,
+            "success": "Account updated successfully."
+        }
+    )

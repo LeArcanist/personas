@@ -96,4 +96,37 @@
     color: #9be3b1;
     vertical-align: middle;
   }
+
+  .category-block {
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+
+.category-header {
+    background: rgba(255,255,255,0.08);
+    padding: 10px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+}
+
+.category-content {
+    padding: 10px;
+}
   
+/* Meta row */
+.persona-meta {
+  margin-top: 10px;
+}
+
+/* Category badge */
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(139, 92, 246, 0.15);
+  color: #c4b5fd;
+}
