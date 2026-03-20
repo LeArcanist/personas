@@ -22,12 +22,14 @@ from security.identity_policy import IdentityPolicy
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
+"""
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+"""
 
 def is_persona_verified(db: Session, persona_id: int) -> bool:
     return (

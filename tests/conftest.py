@@ -13,7 +13,40 @@ from main import app
 import routers.users as users_router
 import routers.chat as chat_router
 
+import routers.api as api_router
+import routers.auth as auth_router
+import routers.steam as steam_router
+
 TEST_DB_URL = "sqlite:///./test_identity.db"
+
+@pytest.fixture
+def client_factory(db_session):
+    def override_get_db():
+        try:
+            yield db_session
+        finally:
+            pass
+
+    def make_client():
+        app.dependency_overrides[users_router.get_db] = override_get_db
+        app.dependency_overrides[api_router.get_db] = override_get_db
+        app.dependency_overrides[chat_router.get_db] = override_get_db
+        app.dependency_overrides[auth_router.get_db] = override_get_db
+        app.dependency_overrides[steam_router.get_db] = override_get_db
+        return TestClient(app)
+
+    clients = []
+
+    def factory():
+        c = make_client()
+        clients.append(c)
+        return c
+
+    yield factory
+
+    for c in clients:
+        c.close()
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture(scope="session")
